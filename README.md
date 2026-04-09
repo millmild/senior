@@ -6,6 +6,8 @@
 ```bash
 npm install
 npm run dev
+pip install scikit-learn
+pip install scikit-learn sentence-transformers
 ```
 Open the Vite URL (e.g. http://localhost:5173).
 
