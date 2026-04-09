@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client
 from sentence_transformers import SentenceTransformer
+from sklearn.cluster import KMeans
+import ast
 
 app = FastAPI()
 
@@ -40,70 +42,82 @@ class QueryRequest(BaseModel):
     year: int | None = None
     advisor: str | None = None
 
-# =========================
-# 🔍 SEARCH (AI + FILTER)
-# =========================
-# @app.post("/search")
-# def search(req: QueryRequest):
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
-#     # 🔥 มี query → ใช้ AI
-#     if req.query and req.query.strip() != "":
-#         query_embedding = model.encode(req.query).tolist()
+def cosine_cluster(projects, threshold=0.8):
+    clusters = []
+    used = set()
 
-#         result = supabase.rpc("hybrid_search", {
-#             "query_text": req.query,
-#             "query_embedding": query_embedding,
-#             "match_count": 100
-#         }).execute()
+    embeddings = [p["embedding"] for p in projects]
 
-#         data = result.data
+    sim_matrix = cosine_similarity(embeddings)
 
-#     # 🔥 ไม่มี query → เอาทั้งหมด
-#     else:
-#         result = supabase.table("proposal_docs") \
-#             .select("*") \
-#             .execute()
+    for i, p in enumerate(projects):
+        if i in used:
+            continue
 
-#         data = result.data
+        cluster = [p]
+        used.add(i)
 
-#     # ✅ FIX YEAR (สำคัญมาก)
-#     if req.year is not None:
-#         data = [
-#             d for d in data
-#             if str(d.get("year")) == str(req.year)
-#         ]
+        for j in range(len(projects)):
+            if j not in used and sim_matrix[i][j] > threshold:
+                cluster.append(projects[j])
+                used.add(j)
 
-#     # ✅ filter advisor
-#     if req.advisor:
-#         data = [
-#             d for d in data
-#             if d.get("advisor") and req.advisor.lower() in d["advisor"].lower()
-#         ]
+        clusters.append(cluster)
 
-#     return data
+    return clusters
 
-# @app.post("/search")
-# def search(req: QueryRequest):
 
-#     # 🔥 ใช้ SQL search ก่อน (เร็วมาก)
-#     if req.query and req.query.strip() != "":
-#         result = supabase.table("proposal_docs") \
-#             .select("*") \
-#             .ilike("title", f"%{req.query}%") \
-#             .limit(50) \
-#             .execute()
 
-#         data = result.data
 
-#     else:
-#         result = supabase.table("proposal_docs") \
-#             .select("*") \
-#             .limit(50) \
-#             .execute()
+@app.get("/projects/cluster")
+def cluster_projects():
 
-#         data = result.data
+    result = supabase.table("proposal_docs") \
+        .select("id, title, year, advisor, file_url, embedding") \
+        .execute()
 
-#     return data
+    projects = result.data
+
+    # 🔥 แปลง embedding
+    clean_projects = []
+
+    for p in projects:
+        emb = p.get("embedding")
+
+        if not emb:
+            continue
+
+        if isinstance(emb, str):
+            emb = ast.literal_eval(emb)
+
+        p["embedding"] = emb
+        clean_projects.append(p)
+
+    # 🔥 ใช้ cosine clustering
+    clusters = cosine_cluster(clean_projects, threshold=0.8)
+
+    # 🔥 format output
+    final = {}
+
+    for cluster in clusters:
+        name = get_cluster_name(cluster)
+
+        items = []
+        for p in cluster:
+            p2 = p.copy()
+            p2.pop("embedding", None)
+            items.append(p2)
+
+        if name in final:
+            final[name].extend(items)
+        else:
+            final[name] = items
+
+    return final
+
 
 @app.post("/search")
 def search(req: QueryRequest):
@@ -257,32 +271,88 @@ def get_quick_projects(page: int = 1, limit: int = 20):
 
     return result.data
 
-@app.get("/keywords/trending")
-def get_keywords(year: int = None):
-    result = supabase.table("proposal_docs") \
-        .select("keywords, year") \
-        .execute()
+# @app.get("/keywords/trending")
+# def get_keywords(year: int = None):
+#     result = supabase.table("proposal_docs") \
+#         .select("keywords, year") \
+#         .execute()
 
-    data = result.data
+#     data = result.data
 
-    keyword_count = {}
+#     keyword_count = {}
 
-    for row in data:
-        if year and row["year"] != year:
-            continue
+#     for row in data:
+#         if year and row["year"] != year:
+#             continue
 
-        if not row["keywords"]:
-            continue
+#         if not row["keywords"]:
+#             continue
 
-        for k in row["keywords"]:
-            keyword_count[k] = keyword_count.get(k, 0) + 1
+#         for k in row["keywords"]:
+#             keyword_count[k] = keyword_count.get(k, 0) + 1
 
-    # แปลงเป็น list + sort
-    result = [
-        {"keyword": k, "count": v}
-        for k, v in keyword_count.items()
-    ]
+#     # แปลงเป็น list + sort
+#     result = [
+#         {"keyword": k, "count": v}
+#         for k, v in keyword_count.items()
+#     ]
 
-    result.sort(key=lambda x: x["count"], reverse=True)
+#     result.sort(key=lambda x: x["count"], reverse=True)
 
-    return result
+#     return result
+
+
+
+def get_cluster_name(words):
+    text = " ".join(words[:5]).lower()
+
+    if "ai" in text or "learning" in text or "data" in text:
+        return "🧠 AI & Data"
+
+    if "iot" in text or "sensor" in text:
+        return "🌐 IoT & Hardware"
+
+    if "medical" in text or "health" in text:
+        return "🏥 Healthcare"
+
+    if "web" in text or "system" in text:
+        return "💻 Software & Web"
+
+    return "📊 Others"
+
+
+def get_cluster_name(titles):
+    text = " ".join(titles[:3]).lower()
+
+    if any(x in text for x in ["ai", "learning", "nlp", "data"]):
+        return "🧠 AI & Data"
+
+    if any(x in text for x in ["iot", "sensor", "embedded"]):
+        return "🌐 IoT & Hardware"
+
+    if any(x in text for x in ["medical", "health", "hospital"]):
+        return "🏥 Healthcare"
+
+    if any(x in text for x in ["web", "system", "application"]):
+        return "💻 Software & Web"
+
+    return "📊 Others"
+
+def get_cluster_name(projects):
+    text = " ".join([p["title"] for p in projects[:5]]).lower()
+
+    if any(x in text for x in ["ai", "learning", "nlp", "data"]):
+        return "🧠 AI & Data"
+
+    if any(x in text for x in ["iot", "sensor", "tracking"]):
+        return "🌐 IoT & Hardware"
+
+    if any(x in text for x in ["medical", "health", "dental"]):
+        return "🏥 Healthcare"
+
+    if any(x in text for x in ["web", "system", "application"]):
+        return "💻 Software & Web"
+
+    return "📊 Others"
+
+
