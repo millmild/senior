@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 
@@ -14,3 +15,5 @@ Open the Vite URL (e.g. http://localhost:5173).
 - `/project/:id` Project Detail (full info + similar + download placeholder)
 - `/trending` Top keyword list (by year filter)
 - `/dashboard` Bar chart (projects/year) + Top advisors + Top keywords
+=======
+
