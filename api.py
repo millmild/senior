@@ -211,7 +211,7 @@ def full_search(
 def similar(project_id: str):
     result = supabase.rpc("recommend_projects", {
         "input_id": project_id,
-        "match_count": 5
+        "match_count": 100
     }).execute()
 
     return result.data
@@ -221,10 +221,10 @@ def similar(project_id: str):
 # =========================
 # 👨‍🏫 ADVISORS
 # =========================
-@app.get("/stats/advisors")
-def advisors():
-    result = supabase.rpc("top_advisor_per_year").execute()
-    return result.data
+# @app.get("/stats/advisors")
+# def advisors():
+#     result = supabase.rpc("top_advisor_per_year").execute()
+#     return result.data
 
 # =========================
 # 📄 PROJECT DETAIL
@@ -241,24 +241,6 @@ def get_project(project_id: str):
 
     return result.data[0]
 
-# @app.get("/projects/quick")
-# def get_quick_projects():
-#     result = supabase.table("proposal_docs") \
-#         .select("id,title,advisor,year,file_url") \
-#         .order("year", desc=True) \
-#         .limit(4) \
-#         .execute()
-
-#     return result.data
-
-# @app.get("/projects/quick")
-# def get_quick_projects():
-#     result = supabase.rpc("random_projects", {
-#         "limit_count": 10
-#     }).execute()
-
-#     return result.data
-
 @app.get("/projects/quick")
 def get_quick_projects(page: int = 1, limit: int = 20):
     start = (page - 1) * limit
@@ -271,35 +253,6 @@ def get_quick_projects(page: int = 1, limit: int = 20):
 
     return result.data
 
-# @app.get("/keywords/trending")
-# def get_keywords(year: int = None):
-#     result = supabase.table("proposal_docs") \
-#         .select("keywords, year") \
-#         .execute()
-
-#     data = result.data
-
-#     keyword_count = {}
-
-#     for row in data:
-#         if year and row["year"] != year:
-#             continue
-
-#         if not row["keywords"]:
-#             continue
-
-#         for k in row["keywords"]:
-#             keyword_count[k] = keyword_count.get(k, 0) + 1
-
-#     # แปลงเป็น list + sort
-#     result = [
-#         {"keyword": k, "count": v}
-#         for k, v in keyword_count.items()
-#     ]
-
-#     result.sort(key=lambda x: x["count"], reverse=True)
-
-#     return result
 
 
 
@@ -356,3 +309,81 @@ def get_cluster_name(projects):
     return "📊 Others"
 
 
+# @app.get("/stats/advisors")
+# def advisor_stats():
+#     result = supabase.table("proposal_docs") \
+#         .select("id, title, advisor, year") \
+#         .execute()
+
+#     data = result.data
+
+#     advisor_map = {}
+
+#     for p in data:
+#         name = p["advisor"]
+
+#         if not name:
+#             continue
+
+#         if name not in advisor_map:
+#             advisor_map[name] = {
+#                 "advisor": name,
+#                 "projects": []
+#             }
+
+#         advisor_map[name]["projects"].append({
+#             "id": p["id"],
+#             "title": p["title"],
+#             "year": p["year"]
+#         })
+
+#     return list(advisor_map.values())
+
+# test chat bot
+
+# from fastapi import Body
+# from openai import OpenAI
+
+# client = OpenAI()
+
+# @app.post("/ask")
+# def ask_llm(query: str = Body(...)):
+#     # 🔥 ดึง project จาก DB
+#     res = supabase.table("proposal_docs") \
+#         .select("title, abstract") \
+#         .limit(10) \
+#         .execute()
+
+#     projects = res.data
+
+#     # 🔥 ทำ context
+#     context = "\n".join([
+#         f"- {p['title']}: {p.get('abstract', '')[:100]}"
+#         for p in projects
+#     ])
+
+#     # 🔥 เรียก LLM
+#     response = client.chat.completions.create(
+#         model="gpt-4.1-mini",
+#         messages=[
+#             {
+#                 "role": "system",
+#                 "content": "You recommend senior projects based on user needs."
+#             },
+#             {
+#                 "role": "user",
+#                 "content": f"""
+# User wants: {query}
+
+# Here are some projects:
+# {context}
+
+# Recommend 3 projects and explain why.
+# """
+#             }
+#         ]
+#     )
+
+#     return {
+#         "answer": response.choices[0].message.content
+#     }
