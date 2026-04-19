@@ -95,7 +95,7 @@ export default function Trending() {
 
   return (
     <div style={container}>
-      <h1>🔥 Trending Projects (AI Grouped)</h1>
+      <h1>Trending Projects </h1>
 
       {Object.entries(clusters).map(([category, items]) => (
         <ClusterRow
