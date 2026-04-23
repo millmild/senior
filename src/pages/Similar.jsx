@@ -6,8 +6,9 @@ export default function Similar() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState([]);
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-  const API = "http://127.0.0.1:8000";
+  const API = `${API_BASE_URL}`;
 
   useEffect(() => {
     fetchSimilar();
@@ -24,29 +25,22 @@ export default function Similar() {
 
   return (
     <div style={{ padding: "30px", background: "#f5f6f8", minHeight: "100vh" }}>
-      
       <h2 style={{ marginBottom: "20px" }}>🔥 Similar Projects</h2>
 
       <div style={grid}>
         {data.map((item) => (
           <div key={item.id} style={card}>
-            
             {/* 📅 YEAR */}
-            <p style={year}>
-              📅 {item.year || "-"}
-            </p>
+            <p style={year}>📅 {item.year || "-"}</p>
 
             {/* 🧠 TITLE */}
             <h3 style={title}>{item.title}</h3>
 
             {/* 👨‍🏫 ADVISOR */}
-            <p style={advisor}>
-              {item.advisor || "-"}
-            </p>
+            <p style={advisor}>{item.advisor || "-"}</p>
 
             {/* 🔘 BUTTONS */}
             <div style={btnRow}>
-              
               <button
                 onClick={() => navigate(`/project/${item.id}`)}
                 style={btn}
@@ -73,7 +67,6 @@ export default function Similar() {
               >
                 Open
               </button>
-
             </div>
           </div>
         ))}

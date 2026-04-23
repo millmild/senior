@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function SeniorDatabase() {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -20,7 +21,7 @@ export default function SeniorDatabase() {
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/search/full?page=${newPage}&limit=${limit}`,
+        `${API_BASE_URL}/search/full?page=${newPage}&limit=${limit}`,
         {
           method: "POST",
           headers: {

@@ -2,12 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Trending() {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
   const [clusters, setClusters] = useState({});
   const [selectedProjects, setSelectedProjects] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/projects/trend")
+    fetch(`${API_BASE_URL}/projects/trend`)
       .then((res) => res.json())
       .then((data) => {
         console.log("TREND:", data);

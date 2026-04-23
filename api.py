@@ -49,7 +49,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 def get_embedding(text):
     """Replaces model.encode(text)"""
     result = client.models.embed_content(
-        model="text-embedding-004",
+        model="gemini-embedding-001",
         contents=text
     )
     return result.embeddings[0].values

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
   const navigate = useNavigate();
   const scrollRef = useRef();
 
@@ -17,7 +18,7 @@ export default function Home() {
   useEffect(() => {
     setLoading(true);
 
-    fetch("http://127.0.0.1:8000/projects/quick")
+    fetch(`${API_BASE_URL}/projects/quick`)
       .then((res) => res.json())
       .then((data) => setProjects(data || []))
       .catch((err) => console.error(err))
@@ -58,7 +59,6 @@ export default function Home() {
 
   return (
     <div style={{ background: "#f5f6f8", minHeight: "100vh", padding: "30px" }}>
-      
       {/* 🔵 HERO */}
       <div style={hero}>
         <h1>Welcome to SPR!</h1>
@@ -119,25 +119,33 @@ export default function Home() {
       {loading && <p>🔍 Loading...</p>}
 
       <div style={{ position: "relative" }}>
-        <button onClick={() => scroll("left")} style={leftBtn}>‹</button>
-        <button onClick={() => scroll("right")} style={rightBtn}>›</button>
+        <button onClick={() => scroll("left")} style={leftBtn}>
+          ‹
+        </button>
+        <button onClick={() => scroll("right")} style={rightBtn}>
+          ›
+        </button>
 
         <div ref={scrollRef} style={scrollContainer}>
           {projects.map((p) => (
             <div key={p.id} style={card}>
-              <p style={{ color: "#888", fontSize: "12px" }}>
-                📅 {p.year}
-              </p>
+              <p style={{ color: "#888", fontSize: "12px" }}>📅 {p.year}</p>
 
               <h3>{p.title}</h3>
               <p>{p.advisor}</p>
 
               <div style={{ marginTop: "10px", display: "flex", gap: "5px" }}>
-                <button onClick={() => navigate(`/project/${p.id}`)} style={btn}>
+                <button
+                  onClick={() => navigate(`/project/${p.id}`)}
+                  style={btn}
+                >
                   Detail
                 </button>
 
-                <button onClick={() => navigate(`/similar/${p.id}`)} style={btn}>
+                <button
+                  onClick={() => navigate(`/similar/${p.id}`)}
+                  style={btn}
+                >
                   Similar
                 </button>
 

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
   // ======================
   // 🔍 SEARCH
   // ======================
@@ -21,7 +23,7 @@ export default function Dashboard() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/search", {
+      const res = await fetch(`${API_BASE_URL}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
@@ -42,7 +44,7 @@ export default function Dashboard() {
   const [loadingTrends, setLoadingTrends] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/projects/trending?limit=5")
+    fetch(`${API_BASE_URL}/projects/trending?limit=5`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -63,10 +65,16 @@ export default function Dashboard() {
   const [year, setYear] = useState(2021);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/stats/advisors")
-      .then((res) => res.json())
-      .then((data) => setAdvisors(data));
-  }, []);
+    fetch(`${API_BASE_URL}/stats/advisors`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch advisors");
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) setAdvisors(data);
+      })
+      .catch((err) => console.error(err));
+  }, [API_BASE_URL]);
 
   const filteredAdvisors = advisors.filter((a) => a.year === year).slice(0, 5);
 

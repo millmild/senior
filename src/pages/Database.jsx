@@ -9,9 +9,11 @@ export default function Database() {
 
   const navigate = useNavigate();
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
   const handleSearch = async () => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/search", {
+      const res = await axios.post(`${API_BASE_URL}/search`, {
         query: query || "",
         year: year ? Number(year) : null,
       });
@@ -60,9 +62,7 @@ export default function Database() {
             <h3>{r.title}</h3>
             <p>{r.year}</p>
 
-            <button onClick={() => navigate(`/project/${r.id}`)}>
-              Detail
-            </button>
+            <button onClick={() => navigate(`/project/${r.id}`)}>Detail</button>
 
             <button onClick={() => navigate(`/similar/${r.id}`)}>
               Similar
