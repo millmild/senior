@@ -3,13 +3,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client
-from sentence_transformers import SentenceTransformer
 import serpapi  # Make sure to run 'pip install serpapi'
 from datetime import datetime
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
+from google import genai
 
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,24 +46,26 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 # =========================
 # 🧠 MODEL
 # =========================
-model = None
-
-def get_model():
-    global model
-    if model is None:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        model.half()
-    return model
+def get_embedding(text):
+    """Replaces model.encode(text)"""
+    result = client.models.embed_content(
+        model="text-embedding-004",
+        contents=text
+    )
+    return result.embeddings[0].values
 
 @app.get("/")
 def root():
     return {"status": "ok"}
 
+# @app.get("/predict")
+# def predict():
+#     m = get_model()
+#     return {"message": "model loaded"}
+
 @app.get("/predict")
 def predict():
-    m = get_model()
-    return {"message": "model loaded"}
+    return {"message": "Gemini Embedding API is active"}
 
 
 # model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -288,7 +291,7 @@ def search(req: QueryRequest):
     query = req.query or ""
 
     if query.strip() != "":
-        query_embedding = model.encode(query).tolist()
+        query_embedding = get_embedding(query)
 
         result = supabase.rpc("hybrid_search", {
             "query_text": query,
@@ -324,7 +327,7 @@ def full_search(
     # 🔍 CASE 1: มี keyword → AI
     # =========================
     if query.strip() != "":
-        query_embedding = model.encode(query).tolist()
+        query_embedding = get_embedding(query)
 
         result = supabase.rpc("hybrid_search", {
             "query_text": query,
@@ -519,7 +522,7 @@ def fetch_serpapi_trends():
                     growth = 0.0
 
             # 5. VECTOR EMBEDDING (Using the REFINED topic)
-            trend_vec = model.encode(refined_topic).tolist()
+            trend_vec = get_embedding(refined_topic)
 
             payload.append({
                 "keyword": raw_query,              # Raw Google query
