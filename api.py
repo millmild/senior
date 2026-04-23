@@ -53,13 +53,26 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 # =========================
 
 
+
 model = None
 
-@app.on_event("startup")
-def load_model():
+def get_model():
     global model
-    from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    if model is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+    return model
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+@app.get("/predict")
+def predict():
+    m = get_model()
+    return {"message": "model loaded"}
+
+
 # model = SentenceTransformer("all-MiniLM-L6-v2")
 # model = SentenceTransformer("all-mpnet-base-v2")
 # =========================
