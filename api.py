@@ -589,3 +589,12 @@ def get_trending_projects(limit: int = 5):
         return []
 
 
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.getenv("PORT", "8000"))
+
+    uvicorn.run("api:app", host="0.0.0.0", port=port)
+
+
