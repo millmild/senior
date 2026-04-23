@@ -52,6 +52,7 @@ def get_model():
     if model is None:
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer("all-MiniLM-L6-v2")
+        model.half()
     return model
 
 @app.get("/")
