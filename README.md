@@ -4,8 +4,10 @@
 
 ## Run
 ```bash
+
 npm install
 npm run dev
+npm run build
 pip install scikit-learn
 pip install scikit-learn sentence-transformers
 ```
