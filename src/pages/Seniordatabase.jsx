@@ -31,7 +31,7 @@ export default function SeniorDatabase() {
             year: year ? Number(year) : null,
             advisor: advisor || null,
           }),
-        }
+        },
       );
 
       const data = await res.json();
@@ -71,9 +71,7 @@ export default function SeniorDatabase() {
           style={{ padding: "10px" }}
         >
           <option value="">All years</option>
-        
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
+
           <option value="2021">2021</option>
           <option value="2020">2020</option>
           <option value="2017">2017</option>
@@ -133,9 +131,7 @@ export default function SeniorDatabase() {
 
             <h3>{item.title}</h3>
 
-            <p style={{ color: "#555" }}>
-              Advisor: {item.advisor}
-            </p>
+            <p style={{ color: "#555" }}>Advisor: {item.advisor}</p>
 
             {/* 🔘 BUTTONS */}
             <div style={{ marginTop: "10px", display: "flex", gap: "8px" }}>

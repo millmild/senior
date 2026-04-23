@@ -75,88 +75,97 @@
 //     .replace(/\b\w/g, (c) => c.toUpperCase());
 // }
 
-
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Trending() {
   const [clusters, setClusters] = useState({});
+  const [selectedProjects, setSelectedProjects] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/projects/cluster")
-      .then(res => res.json())
-      .then(data => {
-        console.log("CLUSTERS:", data);
+    fetch("http://127.0.0.1:8000/projects/trend")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("TREND:", data);
         setClusters(data || {});
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error(err));
   }, []);
 
   return (
     <div style={container}>
-      <h1>Trending Projects </h1>
+      <h1> Faculty Trend</h1>
 
-      {Object.entries(clusters).map(([category, items]) => (
-        <ClusterRow
-          key={category}
-          title={category}
-          items={items}
-          navigate={navigate}
-        />
-      ))}
-    </div>
-  );
-}
+      {/* 🔥 loop year */}
+      {Object.entries(clusters).map(([year, topics]) => (
+        <div key={year} style={{ marginBottom: "40px" }}>
+          <h2>{year}</h2>
 
-/* 🔥 COMPONENT แถวแบบ Netflix */
-function ClusterRow({ title, items, navigate }) {
-  const scrollRef = useRef();
+          <div style={scrollRow}>
+            {/* 🔥 loop topic */}
+            {Object.entries(topics).map(([topic, projects]) => (
+              <div key={topic} style={card}>
+                <h3>{topic}</h3>
+                <p>{projects.length} projects</p>
 
-  const scroll = (dir) => {
-    const el = scrollRef.current;
-    const amount = 300;
-    if (dir === "left") el.scrollLeft -= amount;
-    else el.scrollLeft += amount;
-  };
+                {/* 🔥 preview projects */}
+                <div style={{ marginTop: "10px" }}>
+                  {projects.slice(0, 3).map((p) => (
+                    <p
+                      key={p.id}
+                      onClick={() => navigate(`/project/${p.id}`)}
+                      style={{
+                        fontSize: "12px",
+                        color: "#555",
+                        cursor: "pointer",
+                      }}
+                    >
+                      • {p.title}
+                    </p>
+                  ))}
+                </div>
 
-  return (
-    <div style={{ marginBottom: "40px", position: "relative" }}>
-      <h2 style={{ marginBottom: "10px" }}>{title}</h2>
-
-      {/* ปุ่มเลื่อน */}
-      <button onClick={() => scroll("left")} style={leftBtn}>‹</button>
-      <button onClick={() => scroll("right")} style={rightBtn}>›</button>
-
-      {/* แถวเลื่อน */}
-      <div ref={scrollRef} style={scrollRow}>
-        {items.map((p) => (
-          <div key={p.id} style={card}>
-            <p style={{ fontSize: "12px", color: "#888" }}>{p.year}</p>
-
-            <h3 style={{ margin: "5px 0" }}>{p.title}</h3>
-
-            <p style={{ color: "#555" }}>{p.advisor}</p>
-
-            <div style={{ marginTop: "10px", display: "flex", gap: "5px" }}>
-              <button onClick={() => navigate(`/project/${p.id}`)} style={btn}>
-                Detail
-              </button>
-
-              <button onClick={() => navigate(`/similar/${p.id}`)} style={btn}>
-                Similar
-              </button>
-
-              <button
-                onClick={() => p.file_url && window.open(p.file_url)}
-                style={btn}
-              >
-                Open
-              </button>
-            </div>
+                {/* ✅ VIEW ALL (POPUP) */}
+                <button
+                  onClick={() => setSelectedProjects(projects)}
+                  style={btn}
+                >
+                  View all →
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+
+      {/* ================= POPUP ================= */}
+      {selectedProjects && (
+        <div style={overlay}>
+          <div style={modal}>
+            <h2>All Projects</h2>
+
+            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+              {selectedProjects.map((p) => (
+                <div
+                  key={p.id}
+                  style={popupItem}
+                  onClick={() => navigate(`/project/${p.id}`)}
+                >
+                  <p style={{ fontWeight: "bold" }}>{p.title}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>
+                    {p.advisor} • {p.year}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => setSelectedProjects(null)} style={btn}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,7 +182,6 @@ const scrollRow = {
   display: "flex",
   overflowX: "auto",
   gap: "15px",
-  scrollBehavior: "smooth",
 };
 
 const card = {
@@ -186,6 +194,7 @@ const card = {
 };
 
 const btn = {
+  marginTop: "10px",
   padding: "5px 10px",
   background: "#f3f4f6",
   border: "none",
@@ -193,16 +202,30 @@ const btn = {
   cursor: "pointer",
 };
 
-const leftBtn = {
-  position: "absolute",
+/* 🔥 POPUP */
+
+const overlay = {
+  position: "fixed",
+  top: 0,
   left: 0,
-  top: "40%",
-  zIndex: 10,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 999,
 };
 
-const rightBtn = {
-  position: "absolute",
-  right: 0,
-  top: "40%",
-  zIndex: 10,
+const modal = {
+  background: "white",
+  padding: "20px",
+  borderRadius: "15px",
+  width: "500px",
+};
+
+const popupItem = {
+  padding: "10px",
+  borderBottom: "1px solid #eee",
+  cursor: "pointer",
 };
