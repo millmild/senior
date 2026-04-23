@@ -3,3 +3,7 @@ fastapi
 supabase
 sentence-transformers
 scikit-learn
+requests
+google-genai
+python-dotenv
+serpapi
