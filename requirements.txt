@@ -1,3 +1,5 @@
 uvicorn
 fastapi
 supabase
+sentence-transformers
+scikit-learn
