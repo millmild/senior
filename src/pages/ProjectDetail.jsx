@@ -9,20 +9,37 @@ export default function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [similar, setSimilar] = useState([]);
 
+  const [summary, setSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // ================= SUMMARY =================
+  useEffect(() => {
+    setLoadingSummary(true);
+    fetch(`http://127.0.0.1:8000/project/${id}/summary`)
+      .then((res) => res.json())
+      .then((data) => {
+        setSummary(data.summary);
+        setLoadingSummary(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoadingSummary(false);
+      });
+  }, [id]);
   // ================= LOAD DETAIL =================
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/project/${id}`)
-      .then(res => res.json())
-      .then(data => setProject(data))
-      .catch(err => console.error(err));
+      .then((res) => res.json())
+      .then((data) => setProject(data))
+      .catch((err) => console.error(err));
   }, [id]);
 
   // ================= LOAD SIMILAR =================
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/similar/${id}`)
-      .then(res => res.json())
-      .then(data => setSimilar(data))
-      .catch(err => console.error(err));
+      .then((res) => res.json())
+      .then((data) => setSimilar(data))
+      .catch((err) => console.error(err));
   }, [id]);
 
   // ================= SCROLL =================
@@ -38,7 +55,6 @@ export default function ProjectDetail() {
 
   return (
     <div style={container}>
-      
       {/* ================= DETAIL ================= */}
       <h1>{project.title}</h1>
 
@@ -56,9 +72,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* 📄 ABSTRACT */}
-      <p style={{ maxWidth: "800px" }}>
-        {project.abstract}
-      </p>
+      <p style={{ maxWidth: "800px" }}>{project.abstract}</p>
 
       {/* 📄 PDF PREVIEW */}
       {project.file_url && (
@@ -70,14 +84,30 @@ export default function ProjectDetail() {
           style={pdf}
         />
       )}
+      <div style={summaryBox}>
+        <h3 style={{ marginTop: 0, color: "#2c3e50" }}>✨ AI Key Insights</h3>
+        {loadingSummary ? (
+          <p style={{ color: "#7f8c8d", fontStyle: "italic" }}>
+            Analyzing project details...
+          </p>
+        ) : (
+          <div style={summaryContent}>
+            {/* This renders the text while preserving newlines from the AI */}
+            <pre style={summaryPre}>{summary || "No summary available."}</pre>
+          </div>
+        )}
+      </div>
 
       {/* ================= SIMILAR ================= */}
       <h2 style={{ marginTop: "40px" }}>🔥 Similar Projects</h2>
 
       <div style={{ position: "relative" }}>
-        
-        <button onClick={() => scroll("left")} style={leftBtn}>‹</button>
-        <button onClick={() => scroll("right")} style={rightBtn}>›</button>
+        <button onClick={() => scroll("left")} style={leftBtn}>
+          ‹
+        </button>
+        <button onClick={() => scroll("right")} style={rightBtn}>
+          ›
+        </button>
 
         <div ref={scrollRef} style={scrollContainer}>
           {similar.map((item) => (
@@ -92,26 +122,19 @@ export default function ProjectDetail() {
               }}
             >
               {/* YEAR */}
-              <p style={year}>
-                📅 {item.year}
-              </p>
+              <p style={year}>📅 {item.year}</p>
 
               {/* TITLE */}
               <h3>{item.title}</h3>
 
               {/* ADVISOR */}
-              <p style={{ color: "#555" }}>
-                {item.advisor}
-              </p>
+              <p style={{ color: "#555" }}>{item.advisor}</p>
 
-              {/* SCORE */}
-              <p style={score}>
-                ⭐ {item.similarity?.toFixed(3)}
-              </p>
+              {/* SCORE
+              <p style={score}>⭐ {item.similarity?.toFixed(3)}</p> */}
 
               {/* BUTTONS */}
               <div style={btnRow}>
-                
                 <button
                   onClick={() => navigate(`/project/${item.id}`)}
                   style={btn}
@@ -138,7 +161,6 @@ export default function ProjectDetail() {
                 >
                   Open
                 </button>
-
               </div>
             </div>
           ))}
@@ -240,6 +262,30 @@ function formatTag(text) {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+const summaryBox = {
+  background: "#ffffff",
+  borderRadius: "14px",
+  padding: "20px",
+  marginTop: "25px",
+  marginBottom: "25px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  border: "1px solid #ecf0f1",
+  maxWidth: "900px",
+};
+
+const summaryContent = {
+  marginTop: "10px",
+};
+
+const summaryPre = {
+  whiteSpace: "pre-wrap",
+  fontFamily: "inherit",
+  fontSize: "15px",
+  lineHeight: "1.7",
+  color: "#2d3436",
+  margin: 0,
+};
 
 // import { useState } from "react";
 // import axios from "axios";
