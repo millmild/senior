@@ -169,10 +169,10 @@ def classify_project(text: str):
     if any(k in text for k in [
         "game", "gaming",
         "vr", "virtual reality","virtual",
-        "ar", "augmented reality",
-        "unity", "3d", "simulation","Raspberry"
+        "ar", "augmented reality","Mobile Game",
+        "unity", "3d", "simulation","Raspberry","Image Processing",
     ]):
-        return "Game"
+        return "Game and VR"
 
     # 🔥 Security
     if any(k in text for k in [

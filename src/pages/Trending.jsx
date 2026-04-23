@@ -18,7 +18,7 @@ export default function Trending() {
 
   return (
     <div style={container}>
-      <h1>🔥 Trending Projects</h1>
+      <h1> Faculty Trend</h1>
 
       {/* 🔥 loop year */}
       {Object.entries(clusters).map(([year, topics]) => (
