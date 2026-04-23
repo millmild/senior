@@ -1,18 +1,12 @@
 #V.2
-from unicodedata import category
-from unittest import result
-from fastapi import FastAPI, params
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client
 from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans
-import ast
-import requests
 import serpapi  # Make sure to run 'pip install serpapi'
 from datetime import datetime
 from contextlib import asynccontextmanager
-from fastapi import Body
 import os
 from dotenv import load_dotenv
 
@@ -51,7 +45,23 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 # =========================
 # 🧠 MODEL
 # =========================
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+    return model
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+@app.get("/predict")
+def predict():
+    m = get_model()
+    return {"message": "model loaded"}
 # model = SentenceTransformer("all-mpnet-base-v2")
 # =========================
 # 📦 REQUEST SCHEMA
@@ -268,162 +278,6 @@ def trend():
 
     return result
 
-
-
-
-
-# topics = {
-#     "AI": ["ai", "machine learning", "deep learning", "nlp", "vision"],
-#     "IoT": ["iot", "sensor", "embedded", "arduino", "raspberry"],
-#     "Web": ["web", "application", "system", "platform"],
-#     "Data": ["data", "analysis", "prediction", "mining"],
-#     "Healthcare": ["health", "medical", "patient", "disease"],
-#     "Security": ["security", "attack", "malware"],
-#     "Game": ["game", "vr"],
-# }
-
-# # ======================
-# # 🔥 PRECOMPUTE EMBEDDING
-# # ======================
-# topic_embeddings = {
-#     topic: model.encode(" ".join(words))
-#     for topic, words in topics.items()
-# }
-
-# # ======================
-# # 🧠 CLASSIFIER
-# # ======================
-# def classify_project(text: str):
-#     text_lower = text.lower()
-
-#     # ✅ keyword match ก่อน (แม่นสุด)
-#     for topic, keywords in topics.items():
-#         for k in keywords:
-#             if k in text_lower:
-#                 return topic
-
-#     # ✅ fallback → embedding
-#     vec = model.encode(text)
-
-#     best_topic = None
-#     best_score = -1
-
-#     for topic, t_vec in topic_embeddings.items():
-#         score = np.dot(vec, t_vec)
-#         if score > best_score:
-#             best_score = score
-#             best_topic = topic
-
-#     return best_topic or "Others"
-
-# # ======================
-# # 📊 API: CLASSIFIED PROJECTS
-# # ======================
-# @app.get("/projects/classified")
-# def get_projects():
-#     res = supabase.table("proposal_docs") \
-#         .select("id, title, advisor, year, embedding") \
-#         .limit(200) \
-#         .execute()
-
-#     data = res.data or []
-
-#     clusters = cluster_projects(data)
-
-#     result = []
-
-#     for cluster in clusters:
-#         text = " ".join([p["title"] for p in cluster])
-#         topic = classify_project(text)
-
-#         result.append({
-#             "topic": topic,
-#             "projects": cluster
-#         })
-
-#     return result   # ✅ อยู่ใน function แล้ว
-
-# # ======================
-# # 📈 API: TREND PER YEAR
-
-
-# # ======================
-# # 🔎 API: SEARCH + CLASSIFY
-# # ======================
-# @app.get("/search")
-# def search(q: str):
-#     res = supabase.table("proposal_docs") \
-#         .select("id, title, advisor, year") \
-#         .ilike("title", f"%{q}%") \
-#         .limit(20) \
-#         .execute()
-
-#     data = res.data or []
-
-#     for p in data:
-#         p["topic"] = classify_project(p["title"])
-
-    return clusters
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @app.get("/projects/cluster")
-# def cluster_projects():
-
-#     result = supabase.table("proposal_docs") \
-#         .select("id, title, year, advisor, file_url, embedding") \
-#         .execute()
-
-#     projects = result.data
-
-#     # 🔥 แปลง embedding
-#     clean_projects = []
-
-#     for p in projects:
-#         emb = p.get("embedding")
-
-#         if not emb:
-#             continue
-
-#         if isinstance(emb, str):
-#             emb = ast.literal_eval(emb)
-
-#         p["embedding"] = emb
-#         clean_projects.append(p)
-
-#     # 🔥 ใช้ cosine clustering
-#     clusters = cosine_cluster(clean_projects, threshold=0.8)
-
-#     # 🔥 format output
-#     final = {}
-
-#     for cluster in clusters:
-#         name = get_cluster_name(cluster)
-
-#         items = []
-#         for p in cluster:
-#             p2 = p.copy()
-#             p2.pop("embedding", None)
-#             items.append(p2)
-
-#         if name in final:
-#             final[name].extend(items)
-#         else:
-#             final[name] = items
-
-#     return final
-
-
 @app.post("/search")
 def search(req: QueryRequest):
 
@@ -557,188 +411,6 @@ def get_quick_projects(page: int = 1, limit: int = 20):
         .execute()
 
     return result.data
-
-
-
-
-# def get_cluster_name(words):
-#     text = " ".join(words[:5]).lower()
-
-#     if "ai" in text or "learning" in text or "data" in text:
-#         return "🧠 AI & Data"
-
-#     if "iot" in text or "sensor" in text:
-#         return "🌐 IoT & Hardware"
-
-#     if "medical" in text or "health" in text:
-#         return "🏥 Healthcare"
-
-#     if "web" in text or "system" in text:
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
-
-
-# def get_cluster_name(titles):
-#     text = " ".join(titles[:3]).lower()
-
-#     if any(x in text for x in ["ai", "learning", "nlp", "data"]):
-#         return "🧠 AI & Data"
-
-#     if any(x in text for x in ["iot", "sensor", "embedded"]):
-#         return "🌐 IoT & Hardware"
-
-#     if any(x in text for x in ["medical", "health", "hospital"]):
-#         return "🏥 Healthcare"
-
-#     if any(x in text for x in ["web", "system", "application"]):
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
-
-# def get_cluster_name(projects):
-#     text = " ".join([p["title"] for p in projects[:5]]).lower()
-
-#     if any(x in text for x in ["ai", "learning", "nlp", "data"]):
-#         return "🧠 AI & Data"
-
-#     if any(x in text for x in ["iot", "sensor", "tracking"]):
-#         return "🌐 IoT & Hardware"
-
-#     if any(x in text for x in ["medical", "health", "dental"]):
-#         return "🏥 Healthcare"
-
-#     if any(x in text for x in ["web", "system", "application"]):
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
-
-
-# @app.get("/stats/trend")
-# def trend_per_year():
-#     res = supabase.table("proposal_docs") \
-#         .select("title, year, embedding") \
-#         .execute()
-
-#     data = res.data or []
-
-#     embeddings = []
-#     valid = []
-
-#     for d in data:
-#         if d["embedding"]:
-#             emb = d["embedding"]
-
-#             if isinstance(emb, str):
-#                 emb = ast.literal_eval(emb)
-
-#             embeddings.append(emb)
-#             valid.append(d)
-
-#     embeddings = np.array(embeddings)
-
-#     # 🔥 cluster
-#     kmeans = KMeans(n_clusters=5, random_state=42)
-#     labels = kmeans.fit_predict(embeddings)
-
-#     result = {}
-
-#     for i, d in enumerate(valid):
-#         year = d["year"]
-#         cluster = int(labels[i])
-
-#         if year not in result:
-#             result[year] = {}
-
-#         if cluster not in result[year]:
-#             result[year][cluster] = 0
-
-#         result[year][cluster] += 1
-
-#     return result
-
-# @app.get("/stats/advisors")
-# def advisor_stats():
-#     result = supabase.table("proposal_docs") \
-#         .select("id, title, advisor, year") \
-#         .execute()
-
-#     data = result.data
-
-#     advisor_map = {}
-
-#     for p in data:
-#         name = p["advisor"]
-
-#         if not name:
-#             continue
-
-#         for k in row["keywords"]:
-#             keyword_count[k] = keyword_count.get(k, 0) + 1
-
-#     # แปลงเป็น list + sort
-#     result = [
-#         {"keyword": k, "count": v}
-#         for k, v in keyword_count.items()
-#     ]
-
-#     result.sort(key=lambda x: x["count"], reverse=True)
-
-#     return result
-
-
-
-# def get_cluster_name(words):
-#     text = " ".join(words[:5]).lower()
-
-#     if "ai" in text or "learning" in text or "data" in text:
-#         return "🧠 AI & Data"
-
-#     if "iot" in text or "sensor" in text:
-#         return "🌐 IoT & Hardware"
-
-#     if "medical" in text or "health" in text:
-#         return "🏥 Healthcare"
-
-#     if "web" in text or "system" in text:
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
-
-
-# def get_cluster_name(titles):
-#     text = " ".join(titles[:3]).lower()
-
-#     if any(x in text for x in ["ai", "learning", "nlp", "data"]):
-#         return "🧠 AI & Data"
-
-#     if any(x in text for x in ["iot", "sensor", "embedded"]):
-#         return "🌐 IoT & Hardware"
-
-#     if any(x in text for x in ["medical", "health", "hospital"]):
-#         return "🏥 Healthcare"
-
-#     if any(x in text for x in ["web", "system", "application"]):
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
-
-# def get_cluster_name(projects):
-#     text = " ".join([p["title"] for p in projects[:5]]).lower()
-
-#     if any(x in text for x in ["ai", "learning", "nlp", "data"]):
-#         return "🧠 AI & Data"
-
-#     if any(x in text for x in ["iot", "sensor", "tracking"]):
-#         return "🌐 IoT & Hardware"
-
-#     if any(x in text for x in ["medical", "health", "dental"]):
-#         return "🏥 Healthcare"
-
-#     if any(x in text for x in ["web", "system", "application"]):
-#         return "💻 Software & Web"
-
-#     return "📊 Others"
 
 from fastapi import HTTPException
 from ai import generate_summary, extract_clean_keyword
