@@ -594,7 +594,6 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", "8000"))
 
-    # Bind to the PORT env var when present (Render sets this).
     uvicorn.run("api:app", host="0.0.0.0", port=port)
 
 
