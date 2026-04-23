@@ -1,7 +1,6 @@
 uvicorn
 fastapi
 supabase 
-sentence-transformers 
 google-genai 
 python-dotenv 
 serpapi
