@@ -62,6 +62,9 @@ def root():
 def predict():
     m = get_model()
     return {"message": "model loaded"}
+
+
+# model = SentenceTransformer("all-MiniLM-L6-v2")
 # model = SentenceTransformer("all-mpnet-base-v2")
 # =========================
 # 📦 REQUEST SCHEMA
