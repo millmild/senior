@@ -69,7 +69,9 @@ export default function Home() {
             Senior Project Database
           </button>
 
-          <button style={heroBtn}>Trending</button>
+          <button onClick={() => navigate("/trending")} style={heroBtn}>
+            Trending
+          </button>
 
           <button onClick={() => navigate("/dashboard")} style={heroBtn}>
             Dashboard
