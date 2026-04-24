@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
   // ================= SEARCH =================
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);

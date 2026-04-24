@@ -26,7 +26,10 @@ app = FastAPI(lifespan=lifespan)
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", # Standard Vite port
+        "http://127.0.0.1:5173",
+        "https://senior-production-88ef.up.railway.app"  #Your production link 
+        ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
