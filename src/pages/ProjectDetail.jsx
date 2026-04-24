@@ -16,7 +16,7 @@ export default function ProjectDetail() {
   // ================= SUMMARY =================
   useEffect(() => {
     setLoadingSummary(true);
-    fetch(`http://127.0.0.1:8000/project/${id}/summary`)
+    fetch(`${API_BASE_URL}/project/${id}/summary`)
       .then((res) => res.json())
       .then((data) => {
         setSummary(data.summary);
@@ -29,7 +29,7 @@ export default function ProjectDetail() {
   }, [id]);
   // ================= LOAD DETAIL =================
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/project/${id}`)
+    fetch(`${API_BASE_URL}/project/${id}`)
       .then((res) => res.json())
       .then((data) => setProject(data))
       .catch((err) => console.error(err));
