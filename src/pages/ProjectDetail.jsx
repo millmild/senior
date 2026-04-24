@@ -37,7 +37,7 @@ export default function ProjectDetail() {
 
   // ================= LOAD SIMILAR =================
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/similar/${id}`)
+    fetch(`${API_BASE_URL}/similar/${id}`)
       .then((res) => res.json())
       .then((data) => setSimilar(data))
       .catch((err) => console.error(err));
