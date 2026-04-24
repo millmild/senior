@@ -182,7 +182,7 @@ export default function Dashboard() {
                     setSelectedAdvisor(a.advisor);
 
                     const res = await fetch(
-                      `http://127.0.0.1:8000/advisor/${encodeURIComponent(
+                      `${API_BASE_URL}/advisor/${encodeURIComponent(
                         a.advisor,
                       )}`,
                     );
