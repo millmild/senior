@@ -16,7 +16,7 @@ export default function ProjectDetail() {
   // ================= SUMMARY =================
   useEffect(() => {
     setLoadingSummary(true);
-    fetch(`${API_BASE_URL}/project/${id}/summary`)
+    fetch(`http://127.0.0.1:8000/project/${id}/summary`)
       .then((res) => res.json())
       .then((data) => {
         setSummary(data.summary);
@@ -29,7 +29,7 @@ export default function ProjectDetail() {
   }, [id]);
   // ================= LOAD DETAIL =================
   useEffect(() => {
-    fetch(`${API_BASE_URL}/project/${id}`)
+    fetch(`http://127.0.0.1:8000/project/${id}`)
       .then((res) => res.json())
       .then((data) => setProject(data))
       .catch((err) => console.error(err));
@@ -37,7 +37,7 @@ export default function ProjectDetail() {
 
   // ================= LOAD SIMILAR =================
   useEffect(() => {
-    fetch(`${API_BASE_URL}/similar/${id}`)
+    fetch(`http://127.0.0.1:8000/similar/${id}`)
       .then((res) => res.json())
       .then((data) => setSimilar(data))
       .catch((err) => console.error(err));
@@ -100,7 +100,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* ================= SIMILAR ================= */}
-      <h2 style={{ marginTop: "40px" }}>🔥 Similar Projects</h2>
+      <h2 style={{ marginTop: "20px" }}>🔥 Similar Projects</h2>
 
       <div style={{ position: "relative" }}>
         <button onClick={() => scroll("left")} style={leftBtn}>
@@ -194,6 +194,7 @@ const tag = {
 
 const pdf = {
   marginTop: "20px",
+  marginBottom: "10px", // 👈 Add this line for the gap
   borderRadius: "10px",
   border: "1px solid #ddd",
 };
@@ -265,14 +266,13 @@ function formatTag(text) {
 }
 
 const summaryBox = {
-  background: "#ffffff",
-  borderRadius: "14px",
+  backgroundColor: "#f8f9fa",
   padding: "20px",
-  marginTop: "25px",
-  marginBottom: "25px",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-  border: "1px solid #ecf0f1",
-  maxWidth: "900px",
+  borderRadius: "12px",
+  border: "1px solid #e1e8ed",
+  width: "100%",
+  display: "block",
+  boxSizing: "border-box",
 };
 
 const summaryContent = {
@@ -280,10 +280,14 @@ const summaryContent = {
 };
 
 const summaryPre = {
-  whiteSpace: "pre-wrap",
-  fontFamily: "inherit",
-  fontSize: "15px",
-  lineHeight: "1.7",
-  color: "#2d3436",
+  whiteSpace: "pre-wrap", // 🔑 Essential: wraps text to next line
+  wordBreak: "break-word", // 🔑 Prevents long words from stretching the box
+  fontFamily: "inherit", // Makes it look like regular text, not code
+  fontSize: "1rem",
+  lineHeight: "1.6",
+  color: "#34495e",
   margin: 0,
+  // 🔑 Fill the container
+  width: "100%",
+  overflowX: "hidden", // Prevents accidental horizontal scrolling
 };

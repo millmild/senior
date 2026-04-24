@@ -4,11 +4,7 @@ import { useNavigate } from "react-router-dom";
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
-  // ======================
-  // 🔍 SEARCH
-  // ======================
+  // ================= SEARCH =================
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,10 +12,11 @@ export default function Dashboard() {
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-    if (controllerRef.current) controllerRef.current.abort();
 
+    if (controllerRef.current) controllerRef.current.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+
     setLoading(true);
 
     try {
@@ -29,17 +26,17 @@ export default function Dashboard() {
         signal: controller.signal,
         body: JSON.stringify({ query, year: null, advisor: null }),
       });
+
       const data = await res.json();
       setResults(data.slice(0, 10));
     } catch (err) {
-      if (err.name !== "AbortError") console.error("Search error:", err);
+      if (err.name !== "AbortError") console.error(err);
     }
+
     setLoading(false);
   };
 
-  // ======================
-  // 🔥 TRENDING PROJECTS (New Section)
-  // ======================
+  // ================= TRENDING =================
   const [trending, setTrending] = useState([]);
   const [loadingTrends, setLoadingTrends] = useState(true);
 
@@ -47,154 +44,208 @@ export default function Dashboard() {
     fetch(`${API_BASE_URL}/projects/trending?limit=5`)
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setTrending(data);
-        }
+        setTrending(Array.isArray(data) ? data : []);
         setLoadingTrends(false);
       })
-      .catch((err) => {
-        console.error("Trend fetch error:", err);
-        setLoadingTrends(false);
-      });
+      .catch(() => setLoadingTrends(false));
   }, []);
 
-  // ======================
-  // 👨‍🏫 TOP ADVISORS
-  // ======================
+  // ================= ADVISORS =================
   const [advisors, setAdvisors] = useState([]);
-  const [year, setYear] = useState(2021);
+  const [year, setYear] = useState(0);
+  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [selectedAdvisor, setSelectedAdvisor] = useState(null);
+  const [loadingAdvisor, setLoadingAdvisor] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/stats/advisors`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch advisors");
-        return res.json();
-      })
-      .then((data) => {
-        if (Array.isArray(data)) setAdvisors(data);
-      })
-      .catch((err) => console.error(err));
-  }, [API_BASE_URL]);
-
-  const filteredAdvisors = advisors.filter((a) => a.year === year).slice(0, 5);
+      .then((res) => res.json())
+      .then((data) => setAdvisors(data || []));
+  }, []);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen space-y-6">
       <h1 className="text-3xl font-bold">📊 Dashboard</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Search & Trends */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* ================= SEARCH ================= */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="text-lg font-semibold mb-3">🔎 Search Projects</h2>
-            <div className="flex gap-2">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && !loading && handleSearch()
-                }
-                placeholder="Search projects..."
-                className="flex-1 border px-4 py-2 rounded-lg"
-              />
-              <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg disabled:bg-gray-400"
-              >
-                {loading ? "..." : "Search"}
-              </button>
-            </div>
+      {/* ================= REMOVED THE 3-COLUMN GRID ================= */}
+      <div className="space-y-6">
+        {/* SEARCH - Now automatically takes full width */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="text-lg font-semibold mb-3">🔎 Search Projects</h2>
+          <div className="flex gap-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="flex-1 border px-4 py-2 rounded-lg"
+            />
+            <button
+              onClick={handleSearch}
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg"
+            >
+              {loading ? "..." : "Search"}
+            </button>
+          </div>
 
-            <div className="mt-4">
-              {results.map((item) => (
+          <div className="mt-4">
+            {results.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate(`/project/${item.id}`)}
+                className="p-3 border-b cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              >
+                <p className="font-medium text-blue-600">{item.title}</p>
+                <p className="text-sm text-gray-500">
+                  {item.advisor} • {item.year}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* TRENDING - Updated to grid-cols-3 for better use of full width */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="font-semibold mb-4">🔥 Trending Projects</h2>
+          {loadingTrends ? (
+            <p>Loading...</p>
+          ) : (
+            /* Changed md:grid-cols-2 to lg:grid-cols-3 since we have more horizontal space */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trending.map((p) => (
                 <div
-                  key={item.id}
-                  onClick={() => navigate(`/project/${item.id}`)}
-                  className="p-3 border-b cursor-pointer hover:bg-gray-50 rounded-lg transition"
+                  key={p.id}
+                  onClick={() => navigate(`/project/${p.id}`)}
+                  className="p-4 border rounded-xl cursor-pointer hover:shadow transition bg-gray-50"
                 >
-                  <p className="font-medium text-blue-600">{item.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {item.advisor} • {item.year}
+                  <p className="font-bold line-clamp-2">{p.title}</p>
+                  <p className="text-xs text-orange-500 mt-1">
+                    {p.trending_reason}
                   </p>
                 </div>
               ))}
             </div>
-          </div>
+          )}
+        </div>
+      </div>
 
-          {/* ================= TRENDING PROJECTS ================= */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">🔥</span>
-              <h2 className="text-lg font-semibold">Dynamic Recommendations</h2>
+      {/* ================= 🔥 ADVISORS (MOVED DOWN) ================= */}
+      <div className="bg-white p-6 rounded-2xl shadow-md">
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-bold">👨‍🏫 Browse Advisors</h2>
+
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="border px-3 py-2 rounded-lg"
+          >
+            <option value={0}>All</option>
+            <option value={2016}>2016</option>
+            <option value={2017}>2017</option>
+            <option value={2020}>2020</option>
+            <option value={2021}>2021</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {advisors.map((a) => {
+            const projects = (a.projects || []).filter(
+              (p) => !year || p.year === year,
+            );
+
+            if (projects.length === 0) return null;
+
+            return (
+              <div key={a.advisor} className="bg-gray-50 p-4 rounded-xl shadow">
+                <p className="font-semibold text-lg">{a.advisor}</p>
+                <p className="text-sm text-gray-500">
+                  {projects.length} projects
+                </p>
+
+                <div className="max-h-32 overflow-y-auto text-sm mt-2">
+                  {projects.slice(0, 5).map((p) => (
+                    <p
+                      key={p.id}
+                      onClick={() => navigate(`/project/${p.id}`)}
+                      className="cursor-pointer hover:text-blue-500"
+                    >
+                      • {p.title}
+                    </p>
+                  ))}
+                </div>
+
+                <button
+                  className="mt-2 text-blue-600"
+                  onClick={async () => {
+                    setLoadingAdvisor(true);
+                    setSelectedAdvisor(a.advisor);
+
+                    const res = await fetch(
+                      `http://127.0.0.1:8000/advisor/${encodeURIComponent(
+                        a.advisor,
+                      )}`,
+                    );
+                    const data = await res.json();
+
+                    setSelectedProjects(data || []);
+                    setLoadingAdvisor(false);
+                  }}
+                >
+                  View projects →
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedAdvisor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* BACKDROP */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => {
+              setSelectedAdvisor(null);
+              setSelectedProjects([]);
+            }}
+          />
+
+          {/* MODAL */}
+          <div className="relative bg-white w-[600px] max-h-[80vh] overflow-y-auto p-6 rounded-xl z-10">
+            {/* HEADER */}
+            <div className="flex justify-between mb-4">
+              <h2 className="text-lg font-bold">{selectedAdvisor}</h2>
+              <button
+                onClick={() => {
+                  setSelectedAdvisor(null);
+                  setSelectedProjects([]);
+                }}
+              >
+                ✕
+              </button>
             </div>
 
-            {loadingTrends ? (
-              <div className="animate-pulse space-y-3">
-                <div className="h-10 bg-gray-200 rounded"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
+            {/* LIST */}
+            {loadingAdvisor ? (
+              <p>Loading...</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {trending.map((project) => (
-                  <div
-                    key={project.id}
-                    onClick={() => navigate(`/project/${project.id}`)}
-                    className="p-4 border border-orange-100 bg-orange-50/30 rounded-xl cursor-pointer hover:shadow-md transition group"
-                  >
-                    <p className="font-bold text-gray-800 group-hover:text-orange-600">
-                      {project.title}
-                    </p>
-                    <p className="text-xs font-semibold text-orange-500 mt-1 uppercase tracking-wider">
-                      {project.trending_reason}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                      {project.summary}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              (selectedProjects || []).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={(e) => {
+                    e.stopPropagation(); // 🔥 สำคัญ
+                    setSelectedAdvisor(null); // ปิด modal
+                    navigate(`/project/${p.id}`);
+                  }}
+                  className="w-full text-left p-3 border-b hover:bg-gray-50 cursor-pointer"
+                >
+                  <p className="font-medium">{p.title}</p>
+                  <p className="text-sm text-gray-500">{p.year}</p>
+                </button>
+              ))
             )}
           </div>
         </div>
-
-        {/* Right Column: Advisors */}
-        <div className="space-y-6">
-          {/* ================= TOP ADVISORS ================= */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="text-lg font-semibold mb-3">👨‍🏫 Top Advisors</h2>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full border px-3 py-2 rounded-lg mb-4"
-            >
-              {[2020, 2021, 2022, 2023].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-
-            <div className="space-y-3">
-              {filteredAdvisors.map((a, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-gray-400">#{i + 1}</span>
-                    <p className="text-sm font-medium">{a.advisor}</p>
-                  </div>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                    {a.count}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -45,26 +45,26 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 # =========================
 # 🧠 MODEL
 # =========================
-model = None
+# model = None
 
-def get_model():
-    global model
-    if model is None:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-    return model
+# def get_model():
+#     global model
+#     if model is None:
+#         from sentence_transformers import SentenceTransformer
+#         model = SentenceTransformer("all-MiniLM-L6-v2")
+#     return model
 
-@app.get("/")
-def root():
-    return {"status": "ok"}
+# @app.get("/")
+# def root():
+#     return {"status": "ok"}
 
-@app.get("/predict")
-def predict():
-    m = get_model()
-    return {"message": "model loaded"}
+# @app.get("/predict")
+# def predict():
+#     m = get_model()
+#     return {"message": "model loaded"}
 
 
-# model = SentenceTransformer("all-MiniLM-L6-v2")
+model = SentenceTransformer("all-MiniLM-L6-v2")
 # model = SentenceTransformer("all-mpnet-base-v2")
 # =========================
 # 📦 REQUEST SCHEMA
@@ -287,8 +287,7 @@ def search(req: QueryRequest):
     query = req.query or ""
 
     if query.strip() != "":
-        m = get_model() 
-        query_embedding = m.encode(query).tolist()
+        query_embedding = model.encode(query).tolist()
 
         result = supabase.rpc("hybrid_search", {
             "query_text": query,
@@ -324,8 +323,7 @@ def full_search(
     # 🔍 CASE 1: มี keyword → AI
     # =========================
     if query.strip() != "":
-        m = get_model() 
-        query_embedding = m.encode(query).tolist()
+        query_embedding = model.encode(query).tolist()
 
         result = supabase.rpc("hybrid_search", {
             "query_text": query,
@@ -385,10 +383,42 @@ def similar(project_id: str):
 # =========================
 # 👨‍🏫 ADVISORS
 # =========================
+# @app.get("/stats/advisors")
+# def advisors():
+#     result = supabase.rpc("top_advisor_per_year").execute()
+#     return result.data
+
 @app.get("/stats/advisors")
 def advisors():
-    result = supabase.rpc("top_advisor_per_year").execute()
+    result = supabase.table("proposal_docs") \
+        .select("id, title, year, advisor") \
+        .limit(500) \
+        .execute()
+
+    advisor_map = {}
+
+    for row in result.data:
+        name = row["advisor"]
+
+        if name not in advisor_map:
+            advisor_map[name] = []
+
+        advisor_map[name].append(row)
+
+    return [
+        {"advisor": k, "projects": v}
+        for k, v in advisor_map.items()
+    ]
+
+@app.get("/advisor/{advisor_name}")
+def get_advisor_projects(advisor_name: str):
+    result = supabase.table("proposal_docs") \
+        .select("id, title, year, advisor") \
+        .ilike("advisor", advisor_name + "%") \
+        .execute()
+
     return result.data
+
 
 # =========================
 # 📄 PROJECT DETAIL
@@ -520,8 +550,7 @@ def fetch_serpapi_trends():
                     growth = 0.0
 
             # 5. VECTOR EMBEDDING (Using the REFINED topic)
-            m = get_model()
-            trend_vec = m.encode(refined_topic).tolist()
+            trend_vec = model.encode(refined_topic).tolist()
 
             payload.append({
                 "keyword": raw_query,              # Raw Google query
