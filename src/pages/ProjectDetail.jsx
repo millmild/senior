@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function ProjectDetail() {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
   const { id } = useParams();
   const navigate = useNavigate();
   const scrollRef = useRef();
@@ -15,7 +16,7 @@ export default function ProjectDetail() {
   // ================= SUMMARY =================
   useEffect(() => {
     setLoadingSummary(true);
-    fetch(`http://127.0.0.1:8000/project/${id}/summary`)
+    fetch(`${API_BASE_URL}/project/${id}/summary`)
       .then((res) => res.json())
       .then((data) => {
         setSummary(data.summary);
@@ -28,7 +29,7 @@ export default function ProjectDetail() {
   }, [id]);
   // ================= LOAD DETAIL =================
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/project/${id}`)
+    fetch(`${API_BASE_URL}/project/${id}`)
       .then((res) => res.json())
       .then((data) => setProject(data))
       .catch((err) => console.error(err));
@@ -36,7 +37,7 @@ export default function ProjectDetail() {
 
   // ================= LOAD SIMILAR =================
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/similar/${id}`)
+    fetch(`${API_BASE_URL}/similar/${id}`)
       .then((res) => res.json())
       .then((data) => setSimilar(data))
       .catch((err) => console.error(err));

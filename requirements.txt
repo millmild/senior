@@ -4,3 +4,4 @@ supabase
 google-genai 
 python-dotenv 
 serpapi
+sentence-transformers
