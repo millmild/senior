@@ -1,4 +1,3 @@
-#V.2
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -43,26 +42,7 @@ SUPABASE_SECRET = os.getenv("SUPABASE_SECRET")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SECRET)
 
-# =========================
-# 🧠 MODEL
-# =========================
-# model = None
 
-# def get_model():
-#     global model
-#     if model is None:
-#         from sentence_transformers import SentenceTransformer
-#         model = SentenceTransformer("all-MiniLM-L6-v2")
-#     return model
-
-# @app.get("/")
-# def root():
-#     return {"status": "ok"}
-
-# @app.get("/predict")
-# def predict():
-#     m = get_model()
-#     return {"message": "model loaded"}
 
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -75,22 +55,68 @@ class QueryRequest(BaseModel):
     year: int | None = None
     advisor: str | None = None
 
-
-import numpy as np
+from sentence_transformers import SentenceTransformer
+from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
+from collections import Counter
+import numpy as np
 
-def cosine_cluster(projects, threshold=0.65):
+# ==================================================
+# MODEL
+# ==================================================
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# ==================================================
+# REQUEST SCHEMA
+# ==================================================
+class QueryRequest(BaseModel):
+    query: str
+    year: int | None = None
+    advisor: str | None = None
+
+# ==================================================
+# HELPER
+# รวม title + keywords
+# ==================================================
+def build_project_text(project):
+    title = project.get("title", "") or ""
+    keywords = project.get("keywords", "") or ""
+
+    # ถ้า keywords เป็น list
+    if isinstance(keywords, list):
+        keywords = " ".join(keywords)
+
+    return f"{title} {keywords}".lower().strip()
+
+# ==================================================
+# CLUSTERING
+# ==================================================
+def cosine_cluster(projects, threshold=0.7):
     clusters = []
 
     for p in projects:
+
+        # กัน embedding พัง
+        if not p.get("embedding"):
+            continue
+
         placed = False
 
         for cluster in clusters:
-            # 🔥 หา centroid ของ cluster
-            embeddings = [x["embedding"] for x in cluster]
+
+            embeddings = [
+                x["embedding"]
+                for x in cluster
+                if x.get("embedding")
+            ]
+
+            if not embeddings:
+                continue
+
+            # centroid
             centroid = np.mean(embeddings, axis=0)
 
-            # 🔥 วัด similarity กับ centroid
+            # similarity
             score = cosine_similarity(
                 [p["embedding"]],
                 [centroid]
@@ -101,34 +127,39 @@ def cosine_cluster(projects, threshold=0.65):
                 placed = True
                 break
 
-        # 🔥 ถ้ายังไม่มี cluster → สร้างใหม่
+        # สร้าง cluster ใหม่
         if not placed:
             clusters.append([p])
 
     return clusters
 
+# ==================================================
+# POST PROCESS CLUSTER
+# ==================================================
 def cluster_projects(projects):
-    clusters = cosine_cluster(projects, threshold=0.6)
+
+    clusters = cosine_cluster(projects, threshold=0.7)
 
     good_clusters = []
     outliers = []
 
-    # 🔹 แยกตัวเดี่ยว
+    # แยก cluster เดี่ยว
     for c in clusters:
         if len(c) == 1:
             outliers.append(c[0])
         else:
             good_clusters.append(c)
 
-    # 🔹 เอา outliers ไปใส่ cluster ที่ใกล้สุด
-    from sklearn.metrics.pairwise import cosine_similarity
-
+    # เอา outlier ไปใส่ cluster ที่ใกล้สุด
     for outlier in outliers:
+
         best_cluster = None
         best_score = 0
 
         for cluster in good_clusters:
+
             for p in cluster:
+
                 score = cosine_similarity(
                     [outlier["embedding"]],
                     [p["embedding"]]
@@ -138,116 +169,208 @@ def cluster_projects(projects):
                     best_score = score
                     best_cluster = cluster
 
-        # 🔥 ถ้าใกล้พอ → ยัดเข้า
-        if best_score > 0.4:
+        # similarity สูงพอ
+        if best_score > 0.55 and best_cluster:
             best_cluster.append(outlier)
 
-    # 🔥 ตัวที่ยังเหลือ → Others
+    # ที่เหลือ → Others
     remaining = []
+
     for o in outliers:
         if all(o not in c for c in good_clusters):
             remaining.append(o)
 
     if remaining:
-        good_clusters.append(remaining)  # 👉 Others
+        good_clusters.append(remaining)
 
     return good_clusters
 
+# ==================================================
+# CLASSIFICATION
+# ==================================================
 def classify_project(text: str):
+
     text = text.lower()
 
-    # 🔥 AI
-    if any(k in text for k in [
-        "ai", "artificial intelligence",
-        "machine learning", "deep learning",
-        "neural network", "cnn", "rnn",
-        "nlp", "natural language processing",
-        "text mining", "chatbot", "classification",
-        "prediction model"
-    ]):
-        return "AI"
+    categories = {
 
-    # 🔥 IoT
-    if any(k in text for k in [
-        "iot", "internet of things",
-        "sensor", "arduino", "raspberry",
-        "embedded", "microcontroller",
-        "smart", "device", "monitoring",
-        "temperature", "humidity",
-        "wireless", "automation"
-    ]):
-        return "IoT"
 
-    # 🔥 Healthcare
-    if any(k in text for k in [
-    "health", "healthcare", "medical",
-    "patient", "disease",
-    "diagnosis", "hospital","Vaccine",
-    "treatment", "symptom",
-    "whodas", "disability", "assessment"
-    ]):
-        return "Healthcare"
+        "Healthcare": [
+            "health",
+            "Dengue Severity",
+            "Dengue Haemorrhagic Fever",
+            "healthcare",
+            "medical",
+            "Human",
+            "diabetic retinopathy",
+            "diabetes",
+            "Flare-Up Prediction",
+            "vessel",
+            "patient",
+            "disease",
+            "diagnosis",
+            "hospital",
+            "vaccine",
+            "treatment",
+            "SUSPECTED DENGUE",
+            "DFD",
+            "symptom",
+            "whodas",
+            "disability",
+            "assessment"
+        ],
 
-    # 🔥 Data
-    if any(k in text for k in [
-        "data", "data science", "data analysis",
-        "big data", "analytics",
-        "mining", "forecast", "prediction",
-        "statistics", "dashboard"
-    ]):
-        return "Data"
+        "Business & E-Commerce Systems": [
+            "e-commerce",
+            "E-Commerce"
+            "retail",
+            "WHOLESALE"
+            "inventory",
+            "crm",
+            "Retailer"
+            "erp",
+            "payment"
 
-    # 🔥 Game
-    if any(k in text for k in [
-        "game", "gaming",
-        "vr", "virtual reality","virtual",
-        "ar", "augmented reality","Mobile Game",
-        "unity", "3d", "simulation","Raspberry","Image Processing",
-    ]):
-        return "Game and VR"
+        ],
+        "IoT": [
+            "iot",
+            "internet of things",
+            "sensor",
+            "arduino",
+            "raspberry",
+            "embedded",
+            "microcontroller",
+            "smart device",
+            "monitoring",
+            "temperature",
+            "humidity",
+            "Measurement",
+            "Pressure Sensors",
+            "wireless",
+            "automation"
+        ],
 
-    # 🔥 Security
-    if any(k in text for k in [
-        "security", "cybersecurity",
-        "attack", "malware", "phishing",
-        "encryption", "authentication"
-    ]):
-        return "Security"
+        "Artificial Intelligence": [
+            "ai",
+            "artificial intelligence",
+            "image processing",
+            "machine learning",
+            "deep learning",
+            "neural network",
+            "cnn",
+            "rnn",
+            "nlp",
+            "natural language processing",
+            "image analysis",
+            "text mining",
+            "chatbot",
+            "classification",
+            "transformer",
+            "bert",
+            "gpt",
+            "large language model",
+            "llm",
+            "generative ai",
+            "Machine Learning",
+            "Machine",
+            "prediction model"
 
-    # 🔥 Web (ไว้ล่างสุดเสมอ)
-    if any(k in text for k in [
+        ],
+        
+         "Game and VR": [
+            "game",
+            "gaming",
+            "vr",
+            "virtual reality",
+            "ffmpeg",
+            "augmented reality",
+            "mobile game",
+            "video game",
+            "unity",
+            "3d",
+            "Education Game",
+            "Rubric",
+            "simulation"
+            "robot",
+            "robotics",
+            "autonomous"
+        ],
+
+    
+        "Data": [
+            "data",
+            "data science",
+            "data analysis",
+            "big data",
+            "analytics",
+            "mining",
+            "forecast",
+            "statistics",
+            "dashboard"
+        ],
+
+        "Security": [
+            "security",
+            "cybersecurity",
+            "attack",
+            "malware",
+            "phishing",
+            "encryption",
+            "authentication"
+        ],
+        "web & Mobile Development":[
+            
         "web", "website",
         "application", "platform",
         "frontend", "backend",
-        "api", "system"
-    ]):
-        return "Web"
+        "api", "system","mobile", "app", "development"
+        ]
+    }
+
+    for category, keywords in categories.items():
+
+        if any(keyword in text for keyword in keywords):
+            return category
 
     return "Others"
 
 
 @app.get("/projects/classified")
 def get_projects():
+
     res = supabase.table("proposal_docs") \
-        .select("id, title, advisor, year, embedding") \
+        .select("id, title, keywords, advisor, year, embedding") \
         .limit(200) \
         .execute()
 
     data = res.data or []
 
-    # 🔥 ใช้ clustering
+    # กัน embedding none
+    data = [
+        d for d in data
+        if d.get("embedding") is not None
+    ]
+
+    # clustering
     clusters = cluster_projects(data)
 
     result = []
 
     for cluster in clusters:
-        # 🔥 ถ้าเป็น Others (cluster ใหญ่แต่มั่ว)
+
+        # cluster เดี่ยว
         if len(cluster) == 1:
             topic = "Others"
+
         else:
-           topics = [classify_project(p["title"]) for p in cluster]
-           from collections import Counter 
-           topic = Counter(topics).most_common(1)[0][0]
+            topics = [
+                classify_project(
+                    build_project_text(p)
+                )
+                for p in cluster
+            ]
+
+            topic = Counter(topics).most_common(1)[0][0]
 
         result.append({
             "topic": topic,
@@ -257,10 +380,12 @@ def get_projects():
     return result
 
 
+
 @app.get("/projects/trend")
 def trend():
+
     res = supabase.table("proposal_docs") \
-        .select("id, title, advisor, year") \
+        .select("id, title, keywords, advisor, year") \
         .limit(200) \
         .execute()
 
@@ -269,8 +394,12 @@ def trend():
     result = {}
 
     for p in data:
-        year = p["year"]
-        topic = classify_project(p["title"])
+
+        year = p.get("year")
+
+        text = build_project_text(p)
+
+        topic = classify_project(text)
 
         if year not in result:
             result[year] = {}
@@ -278,7 +407,7 @@ def trend():
         if topic not in result[year]:
             result[year][topic] = []
 
-        result[year][topic].append(p)  # 🔥 เก็บ project จริง
+        result[year][topic].append(p)
 
     return result
 
